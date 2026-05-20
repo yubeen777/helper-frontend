@@ -1,4 +1,9 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL =
+  typeof window !== "undefined"
+    ? "/api/proxy"
+    : process.env.NEXT_PUBLIC_API_URL;
+//브라우저에서 요청할 때 → /api/proxy로 보내면 Next.js가 백엔드로 대신 전달
+//서버에서 요청할 때 → 직접 백엔드 URL로 요청
 
 // 토큰 저장/가져오기
 export const getToken = () => localStorage.getItem("accessToken");
