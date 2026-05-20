@@ -7,17 +7,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { authApi, setToken } from "@/lib/api";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
+
+  const handleSubmit = async () => {
+    setError("");
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        const res = await authApi.login({ email, password });
+        setToken(res.accessToken);
+        router.push("/");
+      } else {
+        await authApi.signup({ name, email, password });
+        setIsLogin(true);
+        setError("회원가입 완료! 로그인해주세요.");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("오류가 발생했습니다.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-      <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => router.push("/")}>
+      <div
+        className="flex items-center gap-3 mb-8 cursor-pointer"
+        onClick={() => router.push("/")}
+      >
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
           <Flame className="h-7 w-7 text-primary-foreground" />
         </div>
@@ -52,6 +83,14 @@ export default function LoginPage() {
             </button>
           </div>
 
+          {error && (
+            <p
+              className={`text-xs mb-4 text-center ${error.includes("완료") ? "text-primary" : "text-red-400"}`}
+            >
+              {error}
+            </p>
+          )}
+
           <div className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
@@ -85,8 +124,12 @@ export default function LoginPage() {
               />
             </div>
 
-            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium mt-2">
-              {isLogin ? "로그인" : "회원가입"}
+            <Button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium mt-2"
+            >
+              {loading ? "처리 중..." : isLogin ? "로그인" : "회원가입"}
             </Button>
           </div>
         </CardContent>
