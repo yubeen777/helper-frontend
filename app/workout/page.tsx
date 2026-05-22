@@ -1,72 +1,73 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { AppShell } from "@/components/app-shell"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search, Plus, X, Check, Dumbbell } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Plus, X, Check, Dumbbell } from "lucide-react";
+import { exerciseApi, workoutApi, getToken } from "@/lib/api";
 
-const exerciseDatabase = [
-  { id: 1, name: "벤치프레스", bodyPart: "가슴", equipment: "바벨" },
-  { id: 2, name: "인클라인 벤치프레스", bodyPart: "가슴", equipment: "바벨" },
-  { id: 3, name: "덤벨 플라이", bodyPart: "가슴", equipment: "덤벨" },
-  { id: 4, name: "케이블 크로스오버", bodyPart: "가슴", equipment: "케이블" },
-  { id: 5, name: "데드리프트", bodyPart: "등", equipment: "바벨" },
-  { id: 6, name: "풀업", bodyPart: "등", equipment: "맨몸" },
-  { id: 7, name: "바벨 로우", bodyPart: "등", equipment: "바벨" },
-  { id: 8, name: "랫 풀다운", bodyPart: "등", equipment: "머신" },
-  { id: 9, name: "스쿼트", bodyPart: "하체", equipment: "바벨" },
-  { id: 10, name: "레그 프레스", bodyPart: "하체", equipment: "머신" },
-  { id: 11, name: "레그 컬", bodyPart: "하체", equipment: "머신" },
-  { id: 12, name: "레그 익스텐션", bodyPart: "하체", equipment: "머신" },
-  { id: 13, name: "숄더 프레스", bodyPart: "어깨", equipment: "바벨" },
-  { id: 14, name: "사이드 레터럴 레이즈", bodyPart: "어깨", equipment: "덤벨" },
-  { id: 15, name: "바벨 컬", bodyPart: "팔", equipment: "바벨" },
-  { id: 16, name: "트라이셉 푸쉬다운", bodyPart: "팔", equipment: "케이블" },
-]
+interface Exercise {
+  id: number;
+  name: string;
+  bodyPart: string;
+}
 
 interface SetData {
-  id: number
-  weight: string
-  reps: string
-  completed: boolean
+  id: number;
+  weight: string;
+  reps: string;
+  completed: boolean;
 }
 
 interface ExerciseEntry {
-  exercise: typeof exerciseDatabase[0]
-  sets: SetData[]
+  exercise: Exercise;
+  sets: SetData[];
 }
 
 export default function WorkoutPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showSearch, setShowSearch] = useState(false)
-  const [workoutExercises, setWorkoutExercises] = useState<ExerciseEntry[]>([])
-  const [workoutStarted, setWorkoutStarted] = useState(false)
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchResults, setSearchResults] = useState<Exercise[]>([]);
+  const [workoutExercises, setWorkoutExercises] = useState<ExerciseEntry[]>([]);
+  const [workoutStarted, setWorkoutStarted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const filteredExercises = exerciseDatabase.filter(
-    (exercise) =>
-      exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exercise.bodyPart.includes(searchQuery) ||
-      exercise.equipment.includes(searchQuery)
-  )
+  useEffect(() => {
+    if (!getToken()) router.push("/login");
+  }, [router]);
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const search = async () => {
+      try {
+        const results = await exerciseApi.search(searchQuery);
+        setSearchResults(results);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    search();
+  }, [searchQuery]);
 
-  const addExercise = (exercise: typeof exerciseDatabase[0]) => {
+  const addExercise = (exercise: Exercise) => {
     setWorkoutExercises((prev) => [
       ...prev,
-      {
-        exercise,
-        sets: [{ id: 1, weight: "", reps: "", completed: false }],
-      },
-    ])
-    setShowSearch(false)
-    setSearchQuery("")
-    if (!workoutStarted) setWorkoutStarted(true)
-  }
+      { exercise, sets: [{ id: 1, weight: "", reps: "", completed: false }] },
+    ]);
+    setShowSearch(false);
+    setSearchQuery("");
+    if (!workoutStarted) setWorkoutStarted(true);
+  };
 
   const removeExercise = (index: number) => {
-    setWorkoutExercises((prev) => prev.filter((_, i) => i !== index))
-  }
+    setWorkoutExercises((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const addSet = (exerciseIndex: number) => {
     setWorkoutExercises((prev) =>
@@ -84,16 +85,16 @@ export default function WorkoutPage() {
                 },
               ],
             }
-          : entry
-      )
-    )
-  }
+          : entry,
+      ),
+    );
+  };
 
   const updateSet = (
     exerciseIndex: number,
     setIndex: number,
     field: "weight" | "reps",
-    value: string
+    value: string,
   ) => {
     setWorkoutExercises((prev) =>
       prev.map((entry, i) =>
@@ -101,13 +102,13 @@ export default function WorkoutPage() {
           ? {
               ...entry,
               sets: entry.sets.map((set, j) =>
-                j === setIndex ? { ...set, [field]: value } : set
+                j === setIndex ? { ...set, [field]: value } : set,
               ),
             }
-          : entry
-      )
-    )
-  }
+          : entry,
+      ),
+    );
+  };
 
   const toggleSetComplete = (exerciseIndex: number, setIndex: number) => {
     setWorkoutExercises((prev) =>
@@ -116,55 +117,65 @@ export default function WorkoutPage() {
           ? {
               ...entry,
               sets: entry.sets.map((set, j) =>
-                j === setIndex ? { ...set, completed: !set.completed } : set
+                j === setIndex ? { ...set, completed: !set.completed } : set,
               ),
             }
-          : entry
-      )
-    )
-  }
+          : entry,
+      ),
+    );
+  };
 
-  const removeSet = (exerciseIndex: number, setIndex: number) => {
-    setWorkoutExercises((prev) =>
-      prev.map((entry, i) =>
-        i === exerciseIndex
-          ? {
-              ...entry,
-              sets: entry.sets.filter((_, j) => j !== setIndex),
-            }
-          : entry
-      )
-    )
-  }
+  const saveWorkout = async () => {
+    setSaving(true);
+    try {
+      const workout = await workoutApi.create({});
+      const workoutId = workout.id;
 
-  const saveWorkout = () => {
-    alert("운동이 저장되었습니다! 🎉")
-    setWorkoutExercises([])
-    setWorkoutStarted(false)
-  }
-
-  const totalVolume = workoutExercises.reduce((total, entry) => {
-    return (
-      total +
-      entry.sets.reduce((setTotal, set) => {
-        if (set.completed && set.weight && set.reps) {
-          return setTotal + parseFloat(set.weight) * parseInt(set.reps)
+      for (const entry of workoutExercises) {
+        for (const set of entry.sets) {
+          if (set.completed && set.weight && set.reps) {
+            await workoutApi.addSet(workoutId, {
+              exerciseId: entry.exercise.id,
+              weight: parseFloat(set.weight),
+              reps: parseInt(set.reps),
+            });
+          }
         }
-        return setTotal
-      }, 0)
-    )
-  }, 0)
+      }
+
+      alert("운동이 저장되었습니다! 🎉");
+      setWorkoutExercises([]);
+      setWorkoutStarted(false);
+      router.push("/");
+    } catch (e) {
+      console.error(e);
+      alert("저장 중 오류가 발생했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const totalVolume = workoutExercises.reduce(
+    (total, entry) =>
+      total +
+      entry.sets.reduce(
+        (setTotal, set) =>
+          set.completed && set.weight && set.reps
+            ? setTotal + parseFloat(set.weight) * parseInt(set.reps)
+            : setTotal,
+        0,
+      ),
+    0,
+  );
 
   const completedSets = workoutExercises.reduce(
-    (total, entry) =>
-      total + entry.sets.filter((set) => set.completed).length,
-    0
-  )
+    (total, entry) => total + entry.sets.filter((set) => set.completed).length,
+    0,
+  );
 
   return (
     <AppShell>
       <div className="mx-auto max-w-md px-4 pt-6">
-        {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground mb-1">운동 기록</h1>
           <p className="text-sm text-muted-foreground">
@@ -174,7 +185,6 @@ export default function WorkoutPage() {
           </p>
         </div>
 
-        {/* Quick Stats */}
         {workoutStarted && (
           <div className="grid grid-cols-2 gap-3 mb-6">
             <Card className="bg-card border-border">
@@ -196,7 +206,6 @@ export default function WorkoutPage() {
           </div>
         )}
 
-        {/* Search Modal */}
         {showSearch && (
           <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm">
             <div className="mx-auto max-w-md px-4 pt-6">
@@ -215,15 +224,15 @@ export default function WorkoutPage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => {
-                    setShowSearch(false)
-                    setSearchQuery("")
+                    setShowSearch(false);
+                    setSearchQuery("");
                   }}
                 >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
               <div className="space-y-2 max-h-[70vh] overflow-y-auto">
-                {filteredExercises.map((exercise) => (
+                {searchResults.map((exercise) => (
                   <Card
                     key={exercise.id}
                     className="bg-card border-border hover:bg-card/80 cursor-pointer transition-colors"
@@ -236,7 +245,7 @@ export default function WorkoutPage() {
                             {exercise.name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {exercise.bodyPart} • {exercise.equipment}
+                            {exercise.bodyPart}
                           </p>
                         </div>
                         <Plus className="h-5 w-5 text-primary" />
@@ -249,7 +258,6 @@ export default function WorkoutPage() {
           </div>
         )}
 
-        {/* Exercise List */}
         <div className="space-y-4 mb-6">
           {workoutExercises.map((entry, exerciseIndex) => (
             <Card key={exerciseIndex} className="bg-card border-border">
@@ -268,24 +276,20 @@ export default function WorkoutPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {entry.exercise.bodyPart} • {entry.exercise.equipment}
+                  {entry.exercise.bodyPart}
                 </p>
               </CardHeader>
               <CardContent className="space-y-2">
-                {/* Set Header */}
                 <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
                   <div className="col-span-2">세트</div>
                   <div className="col-span-4">무게(kg)</div>
                   <div className="col-span-4">횟수</div>
                   <div className="col-span-2"></div>
                 </div>
-                {/* Sets */}
                 {entry.sets.map((set, setIndex) => (
                   <div
                     key={set.id}
-                    className={`grid grid-cols-12 gap-2 items-center p-2 rounded-lg transition-colors ${
-                      set.completed ? "bg-primary/10" : "bg-muted/50"
-                    }`}
+                    className={`grid grid-cols-12 gap-2 items-center p-2 rounded-lg transition-colors ${set.completed ? "bg-primary/10" : "bg-muted/50"}`}
                   >
                     <div className="col-span-2 text-sm font-medium text-muted-foreground">
                       {setIndex + 1}
@@ -300,7 +304,7 @@ export default function WorkoutPage() {
                             exerciseIndex,
                             setIndex,
                             "weight",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="h-9 bg-card border-border text-center"
@@ -316,13 +320,13 @@ export default function WorkoutPage() {
                             exerciseIndex,
                             setIndex,
                             "reps",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="h-9 bg-card border-border text-center"
                       />
                     </div>
-                    <div className="col-span-2 flex justify-end gap-1">
+                    <div className="col-span-2 flex justify-end">
                       <Button
                         variant={set.completed ? "default" : "outline"}
                         size="icon"
@@ -350,7 +354,6 @@ export default function WorkoutPage() {
           ))}
         </div>
 
-        {/* Empty State */}
         {workoutExercises.length === 0 && (
           <div className="text-center py-12">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
@@ -365,26 +368,22 @@ export default function WorkoutPage() {
           </div>
         )}
 
-        {/* Add Exercise Button */}
-        <Button
-          className="w-full mb-4"
-          onClick={() => setShowSearch(true)}
-        >
+        <Button className="w-full mb-4" onClick={() => setShowSearch(true)}>
           <Plus className="h-5 w-5 mr-2" />
           운동 추가
         </Button>
 
-        {/* Save Workout Button */}
         {workoutExercises.length > 0 && (
           <Button
             variant="outline"
             className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
             onClick={saveWorkout}
+            disabled={saving}
           >
-            운동 저장하기
+            {saving ? "저장 중..." : "운동 저장하기"}
           </Button>
         )}
       </div>
     </AppShell>
-  )
+  );
 }

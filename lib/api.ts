@@ -25,8 +25,14 @@ const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "API 오류가 발생했습니다.");
+    const text = await response.text();
+    let error: { message?: string } = {};
+    try {
+      error = text ? JSON.parse(text) : {};
+    } catch {
+      error = {};
+    }
+    throw new Error(error.message || `HTTP ${response.status} 오류`);
   }
 
   if (response.status === 204) return null;
@@ -55,7 +61,13 @@ export const workoutApi = {
   getAll: () => fetchApi("/api/workouts"),
   getOne: (id: number) => fetchApi(`/api/workouts/${id}`),
   create: (data: { memo?: string }) =>
-    fetchApi("/api/workouts", { method: "POST", body: JSON.stringify(data) }),
+    fetchApi("/api/workouts", {
+      method: "POST",
+      body: JSON.stringify({
+        workoutDate: new Date().toISOString().split("T")[0], // 오늘 날짜 "2026-05-22"
+        ...data,
+      }),
+    }),
   delete: (id: number) => fetchApi(`/api/workouts/${id}`, { method: "DELETE" }),
 
   addSet: (
