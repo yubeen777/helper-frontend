@@ -98,9 +98,12 @@ export const statsApi = {
 // AI 피드백 API
 export const feedbackApi = {
   getAll: () => fetchApi("/api/feedback"),
-  request: (workoutId: number) =>
+  request: (feedbackType: string, workoutId?: number) =>
     fetchApi("/api/feedback", {
       method: "POST",
-      body: JSON.stringify({ workoutId }),
+      body: JSON.stringify({
+        feedbackType,
+        ...(workoutId ? { workoutId } : {}),
+      }),
     }),
 };

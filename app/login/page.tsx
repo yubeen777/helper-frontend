@@ -26,6 +26,8 @@ export default function LoginPage() {
       if (isLogin) {
         const res = await authApi.login({ email, password });
         setToken(res.accessToken);
+        localStorage.setItem("nickname", res.nickname);
+        localStorage.setItem("email", res.email);
         router.push("/");
       } else {
         await authApi.signup({ name, email, password });
