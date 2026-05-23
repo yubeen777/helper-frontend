@@ -107,3 +107,11 @@ export const feedbackApi = {
       }),
     }),
 };
+// 유저 API
+export const userApi = {
+  updateMe: (nickname: string) =>
+    fetchApi("/api/users/me", {
+      method: "PATCH",
+      body: JSON.stringify({ nickname }),
+    }),
+};
