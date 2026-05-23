@@ -114,4 +114,11 @@ export const userApi = {
       method: "PATCH",
       body: JSON.stringify({ nickname }),
     }),
+  updatePassword: (currentPassword: string, newPassword: string) =>
+    fetchApi("/api/users/me/password", {
+      method: "PATCH",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+  deleteMe: () =>
+    fetchApi("/api/users/me", { method: "DELETE" }),
 };
