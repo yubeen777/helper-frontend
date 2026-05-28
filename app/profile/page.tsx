@@ -7,16 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, TrendingUp, Calendar, LogOut, ChevronRight, X, Lock, Trash2 } from "lucide-react";
+import {
+  User, LogOut, ChevronRight, X, Lock, Trash2, Zap, Calendar, Dumbbell,
+} from "lucide-react";
 import { getToken, removeToken, statsApi, workoutApi, userApi } from "@/lib/api";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
-  const [totalWorkouts, setTotalWorkouts] = useState(0);
-  const [totalVolume, setTotalVolume] = useState(0);
-  const [workoutCount, setWorkoutCount] = useState(0);
+  const [streakDays, setStreakDays] = useState(0);
+  const [thisWeekWorkouts, setThisWeekWorkouts] = useState(0);
+  const [totalWorkoutCount, setTotalWorkoutCount] = useState(0);
 
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [newNickname, setNewNickname] = useState("");
@@ -40,13 +42,13 @@ export default function ProfilePage() {
 
     const fetchStats = async () => {
       try {
-        const [weekly, workouts] = await Promise.all([
-          statsApi.weekly(),
+        const [streak, workouts] = await Promise.all([
+          statsApi.streak(),
           workoutApi.getAll(),
         ]);
-        setTotalWorkouts(weekly.totalWorkouts);
-        setTotalVolume(weekly.totalVolume);
-        setWorkoutCount(workouts.totalElements || 0);
+        setStreakDays(streak.streakDays ?? 0);
+        setThisWeekWorkouts(streak.thisWeekWorkouts ?? 0);
+        setTotalWorkoutCount(workouts.totalElements || 0);
       } catch (e) {
         console.error(e);
       }
@@ -138,7 +140,11 @@ export default function ProfilePage() {
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1" onClick={() => setShowNicknameModal(false)}>취소</Button>
-                  <Button className="flex-1" onClick={handleSaveNickname} disabled={savingNickname || !newNickname.trim()}>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSaveNickname}
+                    disabled={savingNickname || !newNickname.trim()}
+                  >
                     {savingNickname ? "저장 중..." : "저장"}
                   </Button>
                 </div>
@@ -177,7 +183,11 @@ export default function ProfilePage() {
                 />
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1" onClick={() => setShowPasswordModal(false)}>취소</Button>
-                  <Button className="flex-1" onClick={handleSavePassword} disabled={savingPassword || !currentPassword || !newPassword}>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSavePassword}
+                    disabled={savingPassword || !currentPassword || !newPassword}
+                  >
                     {savingPassword ? "변경 중..." : "변경"}
                   </Button>
                 </div>
@@ -194,7 +204,9 @@ export default function ProfilePage() {
                 <CardTitle className="text-base font-semibold text-foreground">회원탈퇴</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">탈퇴 시 모든 운동 기록과 데이터가 삭제됩니다. 정말 탈퇴하시겠습니까?</p>
+                <p className="text-sm text-muted-foreground">
+                  탈퇴 시 모든 운동 기록과 데이터가 삭제됩니다. 정말 탈퇴하시겠습니까?
+                </p>
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>취소</Button>
                   <Button
@@ -226,28 +238,28 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* 이번 주 통계 */}
+        {/* 통계 3개 */}
         <Card className="mb-6 bg-card border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">이번 주 통계</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">나의 기록</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center">
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <Zap className="h-4 w-4 text-orange-400 mx-auto mb-1" />
+                <p className="text-lg font-bold text-foreground">{streakDays}일</p>
+                <p className="text-[10px] text-muted-foreground">연속 운동</p>
+              </div>
+              <div>
                 <Calendar className="h-4 w-4 text-primary mx-auto mb-1" />
-                <p className="text-lg font-bold text-foreground">{totalWorkouts}회</p>
+                <p className="text-lg font-bold text-foreground">{thisWeekWorkouts}회</p>
                 <p className="text-[10px] text-muted-foreground">이번 주 운동</p>
               </div>
-              <div className="text-center">
-                <TrendingUp className="h-4 w-4 text-primary mx-auto mb-1" />
-                <p className="text-lg font-bold text-foreground">{totalVolume.toLocaleString()}kg</p>
-                <p className="text-[10px] text-muted-foreground">총 볼륨</p>
+              <div>
+                <Dumbbell className="h-4 w-4 text-primary mx-auto mb-1" />
+                <p className="text-lg font-bold text-foreground">{totalWorkoutCount}회</p>
+                <p className="text-[10px] text-muted-foreground">누적 운동</p>
               </div>
-            </div>
-            <div className="mt-3 text-center border-t border-border pt-3">
-              <User className="h-4 w-4 text-primary mx-auto mb-1" />
-              <p className="text-lg font-bold text-foreground">{workoutCount}회</p>
-              <p className="text-[10px] text-muted-foreground">누적 운동</p>
             </div>
           </CardContent>
         </Card>

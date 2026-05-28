@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, X, Check, Dumbbell } from "lucide-react";
 import { exerciseApi, workoutApi, getToken } from "@/lib/api";
+
+const BODY_PARTS = [
+  { key: "", label: "전체" },
+  { key: "CHEST", label: "가슴" },
+  { key: "BACK", label: "등" },
+  { key: "LEG", label: "하체" },
+  { key: "SHOULDER", label: "어깨" },
+  { key: "ARM", label: "팔" },
+  { key: "CORE", label: "코어" },
+  { key: "CARDIO", label: "유산소" },
+];
+
+const BODY_PART_KO: Record<string, string> = {
+  CHEST: "가슴", BACK: "등", LEG: "하체",
+  SHOULDER: "어깨", ARM: "팔", CORE: "코어",
+  CARDIO: "유산소", ETC: "기타",
+};
 
 interface Exercise {
   id: number;
@@ -30,6 +47,7 @@ interface ExerciseEntry {
 export default function WorkoutPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBodyPart, setSelectedBodyPart] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [searchResults, setSearchResults] = useState<Exercise[]>([]);
   const [workoutExercises, setWorkoutExercises] = useState<ExerciseEntry[]>([]);
@@ -39,21 +57,32 @@ export default function WorkoutPage() {
   useEffect(() => {
     if (!getToken()) router.push("/login");
   }, [router]);
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
+
+  const fetchExercises = useCallback(async (keyword: string, bodyPart: string) => {
+    try {
+      const results = await exerciseApi.search(
+        keyword || undefined,
+        bodyPart || undefined,
+      );
+      setSearchResults(results);
+    } catch (e) {
+      console.error(e);
     }
-    const search = async () => {
-      try {
-        const results = await exerciseApi.search(searchQuery);
-        setSearchResults(results);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    search();
-  }, [searchQuery]);
+  }, []);
+
+  // 모달 열릴 때, 탭 변경 시, 검색어 변경 시 자동 fetch
+  useEffect(() => {
+    if (!showSearch) return;
+    const timer = setTimeout(() => {
+      fetchExercises(searchQuery, selectedBodyPart);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [showSearch, searchQuery, selectedBodyPart, fetchExercises]);
+
+  const openSearch = () => {
+    setSearchQuery("");
+    setShowSearch(true);
+  };
 
   const addExercise = (exercise: Exercise) => {
     setWorkoutExercises((prev) => [
@@ -169,7 +198,7 @@ export default function WorkoutPage() {
   );
 
   const completedSets = workoutExercises.reduce(
-    (total, entry) => total + entry.sets.filter((set) => set.completed).length,
+    (total, entry) => total + entry.sets.filter((s) => s.completed).length,
     0,
   );
 
@@ -180,7 +209,7 @@ export default function WorkoutPage() {
           <h1 className="text-2xl font-bold text-foreground mb-1">운동 기록</h1>
           <p className="text-sm text-muted-foreground">
             {workoutStarted
-              ? `${workoutExercises.length}개 운동 • ${completedSets}세트 완료`
+              ? `${workoutExercises.length}개 운동 · ${completedSets}세트 완료`
               : "운동을 추가하여 시작하세요"}
           </p>
         </div>
@@ -197,19 +226,20 @@ export default function WorkoutPage() {
             </Card>
             <Card className="bg-card border-border">
               <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold text-foreground">
-                  {completedSets}
-                </p>
+                <p className="text-2xl font-bold text-foreground">{completedSets}</p>
                 <p className="text-xs text-muted-foreground">완료 세트</p>
               </CardContent>
             </Card>
           </div>
         )}
 
+        {/* 운동 검색 모달 */}
         {showSearch && (
           <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm">
-            <div className="mx-auto max-w-md px-4 pt-6">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="mx-auto max-w-md px-4 pt-6 h-full flex flex-col">
+
+              {/* 검색창 */}
+              <div className="flex items-center gap-3 mb-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -223,41 +253,64 @@ export default function WorkoutPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    setShowSearch(false);
-                    setSearchQuery("");
-                  }}
+                  onClick={() => { setShowSearch(false); setSearchQuery(""); }}
                 >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              <div className="space-y-2 max-h-[70vh] overflow-y-auto">
-                {searchResults.map((exercise) => (
-                  <Card
-                    key={exercise.id}
-                    className="bg-card border-border hover:bg-card/80 cursor-pointer transition-colors"
-                    onClick={() => addExercise(exercise)}
+
+              {/* 부위 탭 */}
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-none flex-shrink-0">
+                {BODY_PARTS.map((bp) => (
+                  <button
+                    key={bp.key}
+                    onClick={() => setSelectedBodyPart(bp.key)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+                      selectedBodyPart === bp.key
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {exercise.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {exercise.bodyPart}
-                          </p>
-                        </div>
-                        <Plus className="h-5 w-5 text-primary" />
-                      </div>
-                    </CardContent>
-                  </Card>
+                    {bp.label}
+                  </button>
                 ))}
+              </div>
+
+              {/* 결과 목록 */}
+              <div className="flex-1 overflow-y-auto space-y-2 pb-6">
+                {searchResults.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground text-sm">
+                    {searchQuery
+                      ? `"${searchQuery}" 검색 결과 없음`
+                      : "운동을 선택하거나 검색하세요"}
+                  </div>
+                ) : (
+                  searchResults.map((exercise) => (
+                    <Card
+                      key={exercise.id}
+                      className="bg-card border-border hover:bg-card/80 cursor-pointer transition-colors"
+                      onClick={() => addExercise(exercise)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-foreground">{exercise.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {BODY_PART_KO[exercise.bodyPart] || exercise.bodyPart}
+                            </p>
+                          </div>
+                          <Plus className="h-5 w-5 text-primary" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           </div>
         )}
 
+        {/* 운동 목록 */}
         <div className="space-y-4 mb-6">
           {workoutExercises.map((entry, exerciseIndex) => (
             <Card key={exerciseIndex} className="bg-card border-border">
@@ -276,7 +329,7 @@ export default function WorkoutPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {entry.exercise.bodyPart}
+                  {BODY_PART_KO[entry.exercise.bodyPart] || entry.exercise.bodyPart}
                 </p>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -289,7 +342,9 @@ export default function WorkoutPage() {
                 {entry.sets.map((set, setIndex) => (
                   <div
                     key={set.id}
-                    className={`grid grid-cols-12 gap-2 items-center p-2 rounded-lg transition-colors ${set.completed ? "bg-primary/10" : "bg-muted/50"}`}
+                    className={`grid grid-cols-12 gap-2 items-center p-2 rounded-lg transition-colors ${
+                      set.completed ? "bg-primary/10" : "bg-muted/50"
+                    }`}
                   >
                     <div className="col-span-2 text-sm font-medium text-muted-foreground">
                       {setIndex + 1}
@@ -300,14 +355,10 @@ export default function WorkoutPage() {
                         placeholder="0"
                         value={set.weight}
                         onChange={(e) =>
-                          updateSet(
-                            exerciseIndex,
-                            setIndex,
-                            "weight",
-                            e.target.value,
-                          )
+                          updateSet(exerciseIndex, setIndex, "weight", e.target.value)
                         }
                         className="h-9 bg-card border-border text-center"
+                        step="0.5"
                       />
                     </div>
                     <div className="col-span-4">
@@ -316,12 +367,7 @@ export default function WorkoutPage() {
                         placeholder="0"
                         value={set.reps}
                         onChange={(e) =>
-                          updateSet(
-                            exerciseIndex,
-                            setIndex,
-                            "reps",
-                            e.target.value,
-                          )
+                          updateSet(exerciseIndex, setIndex, "reps", e.target.value)
                         }
                         className="h-9 bg-card border-border text-center"
                       />
@@ -331,9 +377,7 @@ export default function WorkoutPage() {
                         variant={set.completed ? "default" : "outline"}
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() =>
-                          toggleSetComplete(exerciseIndex, setIndex)
-                        }
+                        onClick={() => toggleSetComplete(exerciseIndex, setIndex)}
                       >
                         <Check className="h-4 w-4" />
                       </Button>
@@ -359,16 +403,14 @@ export default function WorkoutPage() {
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
               <Dumbbell className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              운동을 추가하세요
-            </h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">운동을 추가하세요</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              아래 버튼을 눌러 운동을 검색하고 추가하세요
+              아래 버튼을 눌러 부위별로 운동을 선택하세요
             </p>
           </div>
         )}
 
-        <Button className="w-full mb-4" onClick={() => setShowSearch(true)}>
+        <Button className="w-full mb-4" onClick={openSearch}>
           <Plus className="h-5 w-5 mr-2" />
           운동 추가
         </Button>
