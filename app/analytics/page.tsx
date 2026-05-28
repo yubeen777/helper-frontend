@@ -218,7 +218,7 @@ export default function AnalyticsPage() {
                   <BarChart
                     data={volumeData}
                     layout="vertical"
-                    margin={{ top: 8, right: 56, bottom: 8, left: 8 }}
+                    margin={{ top: 8, right: 56, bottom: 24, left: 8 }}
                     barCategoryGap={18}
                   >
                     <XAxis
@@ -226,7 +226,7 @@ export default function AnalyticsPage() {
                       domain={[0, "dataMax"]}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "hsl(var(--foreground))", fontSize: 10 }}
+                      tick={{ fill: "#e5e7eb", fontSize: 10 }}
                       tickFormatter={(v: number) => `${v.toLocaleString()}`}
                     />
                     <YAxis
@@ -234,7 +234,7 @@ export default function AnalyticsPage() {
                       dataKey="name"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
+                      tick={{ fill: "#e5e7eb", fontSize: 12 }}
                       width={52}
                     />
                     <CartesianGrid
@@ -331,7 +331,7 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={oneRMData}
-                    margin={{ top: 16, right: 16, bottom: 8, left: 0 }}
+                   margin={{ top: 16, right: 16, bottom: 8, left: 8 }}
                   >
                     <CartesianGrid
                       stroke="#333333"
@@ -343,12 +343,12 @@ export default function AnalyticsPage() {
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
+                      tick={{ fill: "#e5e7eb", fontSize: 11 }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
+                      tick={{ fill: "#e5e7eb", fontSize: 11 }}
                       width={40}
                       domain={["dataMin - 5", "dataMax + 5"]}
                       tickFormatter={(v) => `${Math.round(v)}`}
