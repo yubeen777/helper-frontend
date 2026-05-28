@@ -221,14 +221,21 @@ export default function AnalyticsPage() {
                     margin={{ top: 8, right: 56, bottom: 8, left: 8 }}
                     barCategoryGap={18}
                   >
-                    <XAxis type="number" hide domain={[0, "dataMax"]} />
+                    <XAxis
+                      type="number"
+                      domain={[0, "dataMax"]}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "hsl(var(--foreground))", fontSize: 10 }}
+                      tickFormatter={(v: number) => `${v.toLocaleString()}`}
+                    />
                     <YAxis
                       type="category"
                       dataKey="name"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
-                      width={40}
+                      width={52}
                     />
                     <CartesianGrid
                       horizontal={false}
@@ -331,22 +338,17 @@ export default function AnalyticsPage() {
                       strokeDasharray="3 3"
                       strokeOpacity={0.6}
                     />
+
                     <XAxis
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}
-                      tick={{
-                        fill: "hsl(var(--muted-foreground))",
-                        fontSize: 10,
-                      }}
+                      tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{
-                        fill: "hsl(var(--muted-foreground))",
-                        fontSize: 10,
-                      }}
+                      tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
                       width={40}
                       domain={["dataMin - 5", "dataMax + 5"]}
                       tickFormatter={(v) => `${Math.round(v)}`}

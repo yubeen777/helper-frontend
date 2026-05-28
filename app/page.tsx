@@ -16,14 +16,10 @@ import {
 import { statsApi, workoutApi, getToken } from "@/lib/api";
 
 function getMonthlyMessage(count: number) {
-  if (count >= 20)
-    return { text: "헬창이 되어가는구만... 🏆", color: "text-yellow-400" };
-  if (count >= 13)
-    return { text: "이미 남들과 다른 레벨 💀", color: "text-purple-400" };
-  if (count >= 8)
-    return { text: "못 말리는 거 아님? ⚡", color: "text-blue-400" };
-  if (count >= 4)
-    return { text: "이제 좀 진심이네 🔥", color: "text-orange-400" };
+  if (count >= 20) return { text: "헬창이 되어가는구만... 🏆", color: "text-yellow-400" };
+  if (count >= 13) return { text: "이미 남들과 다른 레벨 💀", color: "text-purple-400" };
+  if (count >= 8) return { text: "못 말리는 거 아님? ⚡", color: "text-blue-400" };
+  if (count >= 4) return { text: "이제 좀 진심이네 🔥", color: "text-orange-400" };
   return { text: "일단 시작했으면 됐어 👊", color: "text-green-400" };
 }
 
@@ -38,6 +34,59 @@ interface WorkoutItem {
     weight: number;
     reps: number;
   }[];
+}
+
+// 주별 그룹핑
+function groupByWeek(workouts: WorkoutItem[]) {
+  const weekMap = new Map<string, WorkoutItem[]>();
+
+  workouts.forEach((w) => {
+    const date = new Date(w.workoutDate || w.createdAt);
+    const monday = new Date(date);
+    monday.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+    const key = monday.toISOString().split("T")[0];
+    if (!weekMap.has(key)) weekMap.set(key, []);
+    weekMap.get(key)!.push(w);
+  });
+
+  const groups: { label: string; workouts: WorkoutItem[] }[] = [];
+  weekMap.forEach((items, key) => {
+    const monday = new Date(key);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+    groups.push({ label: `${fmt(monday)} ~ ${fmt(sunday)}`, workouts: items });
+  });
+
+  return groups.sort((a, b) => b.label.localeCompare(a.label));
+}
+
+// 운동 카드 컴포넌트
+function WorkoutCard({ workout, onClick }: { workout: WorkoutItem; onClick: () => void }) {
+  return (
+    <Card
+      className="bg-card border-border hover:bg-card/80 hover:border-primary/30 transition-all cursor-pointer"
+      onClick={onClick}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <Dumbbell className="h-4 w-4 text-primary flex-shrink-0" />
+              <h3 className="font-semibold text-foreground">
+                {workout.memo || "운동 기록"}
+              </h3>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 pl-6">
+              {workout.workoutDate ||
+                new Date(workout.createdAt).toLocaleDateString("ko-KR")}
+            </p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function DashboardPage() {
@@ -56,10 +105,7 @@ export default function DashboardPage() {
   const [allWorkouts, setAllWorkouts] = useState<WorkoutItem[]>([]);
   const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutItem | null>(
-    null,
-  );
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutItem | null>(null);
 
   useEffect(() => {
     if (!getToken()) {
@@ -86,15 +132,12 @@ export default function DashboardPage() {
   }, [router]);
 
   const handleWorkoutClick = async (workout: WorkoutItem) => {
-    setLoadingDetail(true);
     try {
       const detail = await workoutApi.getOne(workout.id);
       setSelectedWorkout(detail);
     } catch (e) {
       console.error(e);
       setSelectedWorkout(workout);
-    } finally {
-      setLoadingDetail(false);
     }
   };
 
@@ -106,8 +149,8 @@ export default function DashboardPage() {
   ).length;
 
   const message = getMonthlyMessage(monthlyCount);
-  const displayWorkouts = showAll ? allWorkouts : allWorkouts.slice(0, 4);
   const isVolumeUp = (weekly?.volumeChangeRate ?? 0) >= 0;
+  const weeklyGroups = groupByWeek(allWorkouts);
 
   if (loading) {
     return (
@@ -124,11 +167,11 @@ export default function DashboardPage() {
       {/* 운동 상세 모달 */}
       {selectedWorkout && (
         <div
-          className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-end justify-center"
+          className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center px-4"
           onClick={() => setSelectedWorkout(null)}
         >
           <div
-            className="w-full max-w-md bg-card border border-border rounded-t-2xl p-5 max-h-[60vh] overflow-y-auto mb-16"
+            className="w-full max-w-md bg-card border border-border rounded-2xl p-5 max-h-[80vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -138,9 +181,7 @@ export default function DashboardPage() {
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {selectedWorkout.workoutDate ||
-                    new Date(selectedWorkout.createdAt).toLocaleDateString(
-                      "ko-KR",
-                    )}
+                    new Date(selectedWorkout.createdAt).toLocaleDateString("ko-KR")}
                 </p>
               </div>
               <button
@@ -151,8 +192,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {selectedWorkout.workoutSets &&
-            selectedWorkout.workoutSets.length > 0 ? (
+            {selectedWorkout.workoutSets && selectedWorkout.workoutSets.length > 0 ? (
               <div className="space-y-3">
                 {Object.entries(
                   selectedWorkout.workoutSets.reduce(
@@ -164,29 +204,17 @@ export default function DashboardPage() {
                     {} as Record<string, typeof selectedWorkout.workoutSets>,
                   ),
                 ).map(([exerciseName, sets]) => (
-                  <div
-                    key={exerciseName}
-                    className="bg-muted/30 rounded-lg p-3"
-                  >
-                    <p className="font-semibold text-foreground text-sm mb-2">
-                      {exerciseName}
-                    </p>
+                  <div key={exerciseName} className="bg-muted/30 rounded-lg p-3">
+                    <p className="font-semibold text-foreground text-sm mb-2">{exerciseName}</p>
                     <div className="grid grid-cols-3 text-xs text-muted-foreground mb-1 px-1">
                       <span>세트</span>
                       <span>무게</span>
                       <span>횟수</span>
                     </div>
                     {sets.map((set, i) => (
-                      <div
-                        key={i}
-                        className="grid grid-cols-3 text-sm py-1 border-t border-border/30"
-                      >
-                        <span className="text-muted-foreground">
-                          {set.setNumber}세트
-                        </span>
-                        <span className="font-medium text-foreground">
-                          {set.weight}kg
-                        </span>
+                      <div key={i} className="grid grid-cols-3 text-sm py-1 border-t border-border/30">
+                        <span className="text-muted-foreground">{set.setNumber}세트</span>
+                        <span className="font-medium text-foreground">{set.weight}kg</span>
                         <span className="text-foreground">{set.reps}회</span>
                       </div>
                     ))}
@@ -211,9 +239,7 @@ export default function DashboardPage() {
             </div>
             <h1 className="text-2xl font-bold text-foreground">Helper</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            오늘도 화이팅하세요! 🔥
-          </p>
+          <p className="text-sm text-muted-foreground">오늘도 화이팅하세요! 🔥</p>
         </div>
 
         {/* 통계 3개 */}
@@ -222,7 +248,6 @@ export default function DashboardPage() {
             이번 주
           </h2>
           <div className="grid grid-cols-3 gap-3">
-            {/* 연속 운동일 */}
             <Card className="bg-card border-border">
               <CardContent className="p-3">
                 <Zap className="h-4 w-4 text-orange-400 mb-2" />
@@ -232,18 +257,12 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-muted-foreground">연속 운동</p>
               </CardContent>
             </Card>
-
-            {/* 볼륨 변화 */}
             <Card className="bg-card border-border">
               <CardContent className="p-3">
-                {isVolumeUp ? (
-                  <TrendingUp className="h-4 w-4 text-primary mb-2" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-destructive mb-2" />
-                )}
-                <p
-                  className={`text-lg font-bold ${isVolumeUp ? "text-primary" : "text-destructive"}`}
-                >
+                {isVolumeUp
+                  ? <TrendingUp className="h-4 w-4 text-primary mb-2" />
+                  : <TrendingDown className="h-4 w-4 text-destructive mb-2" />}
+                <p className={`text-lg font-bold ${isVolumeUp ? "text-primary" : "text-destructive"}`}>
                   {weekly?.lastWeekVolume === 0
                     ? "-"
                     : `${isVolumeUp ? "▲" : "▼"}${Math.abs(weekly?.volumeChangeRate ?? 0)}%`}
@@ -251,17 +270,13 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-muted-foreground">볼륨 변화</p>
               </CardContent>
             </Card>
-
-            {/* 이번 주 운동 횟수 */}
             <Card className="bg-card border-border">
               <CardContent className="p-3">
                 <Calendar className="h-4 w-4 text-primary mb-2" />
                 <p className="text-lg font-bold text-foreground">
                   {streak?.thisWeekWorkouts ?? weekly?.totalWorkouts ?? 0}회
                 </p>
-                <p className="text-[10px] text-muted-foreground">
-                  이번 주 운동
-                </p>
+                <p className="text-[10px] text-muted-foreground">이번 주 운동</p>
               </CardContent>
             </Card>
           </div>
@@ -272,15 +287,9 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  이번 달 운동
-                </p>
-                <p className="text-3xl font-bold text-primary">
-                  {monthlyCount}회
-                </p>
-                <p className={`text-xs font-medium mt-1 ${message.color}`}>
-                  {message.text}
-                </p>
+                <p className="text-sm text-muted-foreground mb-1">이번 달 운동</p>
+                <p className="text-3xl font-bold text-primary">{monthlyCount}회</p>
+                <p className={`text-xs font-medium mt-1 ${message.color}`}>{message.text}</p>
               </div>
               <div className="flex gap-1">
                 {[...Array(7)].map((_, i) => (
@@ -310,12 +319,10 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {displayWorkouts.length === 0 ? (
+          {allWorkouts.length === 0 ? (
             <Card className="bg-card border-border">
               <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground text-sm">
-                  아직 운동 기록이 없어요
-                </p>
+                <p className="text-muted-foreground text-sm">아직 운동 기록이 없어요</p>
                 <button
                   onClick={() => router.push("/workout")}
                   className="mt-3 text-xs text-primary hover:underline"
@@ -324,34 +331,35 @@ export default function DashboardPage() {
                 </button>
               </CardContent>
             </Card>
+          ) : showAll ? (
+            // 전체보기: 주별 그룹핑
+            <div className="space-y-6">
+              {weeklyGroups.map((group) => (
+                <div key={group.label}>
+                  <p className="text-xs text-muted-foreground font-medium mb-2 px-1">
+                    📅 {group.label}
+                  </p>
+                  <div className="space-y-2">
+                    {group.workouts.map((workout) => (
+                      <WorkoutCard
+                        key={workout.id}
+                        workout={workout}
+                        onClick={() => handleWorkoutClick(workout)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
+            // 기본: 최근 4개
             <div className="space-y-3">
-              {displayWorkouts.map((workout) => (
-                <Card
+              {allWorkouts.slice(0, 4).map((workout) => (
+                <WorkoutCard
                   key={workout.id}
-                  className="bg-card border-border hover:bg-card/80 hover:border-primary/30 transition-all cursor-pointer"
+                  workout={workout}
                   onClick={() => handleWorkoutClick(workout)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <Dumbbell className="h-4 w-4 text-primary flex-shrink-0" />
-                          <h3 className="font-semibold text-foreground">
-                            {workout.memo || "운동 기록"}
-                          </h3>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 pl-6">
-                          {workout.workoutDate ||
-                            new Date(workout.createdAt).toLocaleDateString(
-                              "ko-KR",
-                            )}
-                        </p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    </div>
-                  </CardContent>
-                </Card>
+                />
               ))}
             </div>
           )}
