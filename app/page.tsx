@@ -4,14 +4,26 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dumbbell, ChevronRight, Flame, Zap, TrendingUp, TrendingDown, Calendar } from "lucide-react";
+import {
+  Dumbbell,
+  ChevronRight,
+  Flame,
+  Zap,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+} from "lucide-react";
 import { statsApi, workoutApi, getToken } from "@/lib/api";
 
 function getMonthlyMessage(count: number) {
-  if (count >= 20) return { text: "헬창이 되어가는구만... 🏆", color: "text-yellow-400" };
-  if (count >= 13) return { text: "이미 남들과 다른 레벨 💀", color: "text-purple-400" };
-  if (count >= 8) return { text: "못 말리는 거 아님? ⚡", color: "text-blue-400" };
-  if (count >= 4) return { text: "이제 좀 진심이네 🔥", color: "text-orange-400" };
+  if (count >= 20)
+    return { text: "헬창이 되어가는구만... 🏆", color: "text-yellow-400" };
+  if (count >= 13)
+    return { text: "이미 남들과 다른 레벨 💀", color: "text-purple-400" };
+  if (count >= 8)
+    return { text: "못 말리는 거 아님? ⚡", color: "text-blue-400" };
+  if (count >= 4)
+    return { text: "이제 좀 진심이네 🔥", color: "text-orange-400" };
   return { text: "일단 시작했으면 됐어 👊", color: "text-green-400" };
 }
 
@@ -20,7 +32,12 @@ interface WorkoutItem {
   memo: string;
   workoutDate: string;
   createdAt: string;
-  workoutSets?: { exerciseName: string; setNumber: number; weight: number; reps: number }[];
+  workoutSets?: {
+    exerciseName: string;
+    setNumber: number;
+    weight: number;
+    reps: number;
+  }[];
 }
 
 export default function DashboardPage() {
@@ -32,11 +49,16 @@ export default function DashboardPage() {
     lastWeekVolume: number;
     volumeChangeRate: number;
   } | null>(null);
-  const [streak, setStreak] = useState<{ streakDays: number; thisWeekWorkouts: number } | null>(null);
+  const [streak, setStreak] = useState<{
+    streakDays: number;
+    thisWeekWorkouts: number;
+  } | null>(null);
   const [allWorkouts, setAllWorkouts] = useState<WorkoutItem[]>([]);
   const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutItem | null>(null);
+  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutItem | null>(
+    null,
+  );
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
@@ -80,7 +102,7 @@ export default function DashboardPage() {
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthlyCount = allWorkouts.filter((w) =>
-    (w.workoutDate || w.createdAt?.split("T")[0] || "").startsWith(thisMonth)
+    (w.workoutDate || w.createdAt?.split("T")[0] || "").startsWith(thisMonth),
   ).length;
 
   const message = getMonthlyMessage(monthlyCount);
@@ -106,7 +128,7 @@ export default function DashboardPage() {
           onClick={() => setSelectedWorkout(null)}
         >
           <div
-            className="w-full max-w-md bg-card border border-border rounded-t-2xl p-5 max-h-[75vh] overflow-y-auto"
+            className="w-full max-w-md bg-card border border-border rounded-t-2xl p-5 max-h-[60vh] overflow-y-auto mb-16"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -116,7 +138,9 @@ export default function DashboardPage() {
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {selectedWorkout.workoutDate ||
-                    new Date(selectedWorkout.createdAt).toLocaleDateString("ko-KR")}
+                    new Date(selectedWorkout.createdAt).toLocaleDateString(
+                      "ko-KR",
+                    )}
                 </p>
               </div>
               <button
@@ -127,7 +151,8 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {selectedWorkout.workoutSets && selectedWorkout.workoutSets.length > 0 ? (
+            {selectedWorkout.workoutSets &&
+            selectedWorkout.workoutSets.length > 0 ? (
               <div className="space-y-3">
                 {Object.entries(
                   selectedWorkout.workoutSets.reduce(
@@ -139,17 +164,29 @@ export default function DashboardPage() {
                     {} as Record<string, typeof selectedWorkout.workoutSets>,
                   ),
                 ).map(([exerciseName, sets]) => (
-                  <div key={exerciseName} className="bg-muted/30 rounded-lg p-3">
-                    <p className="font-semibold text-foreground text-sm mb-2">{exerciseName}</p>
+                  <div
+                    key={exerciseName}
+                    className="bg-muted/30 rounded-lg p-3"
+                  >
+                    <p className="font-semibold text-foreground text-sm mb-2">
+                      {exerciseName}
+                    </p>
                     <div className="grid grid-cols-3 text-xs text-muted-foreground mb-1 px-1">
                       <span>세트</span>
                       <span>무게</span>
                       <span>횟수</span>
                     </div>
                     {sets.map((set, i) => (
-                      <div key={i} className="grid grid-cols-3 text-sm py-1 border-t border-border/30">
-                        <span className="text-muted-foreground">{set.setNumber}세트</span>
-                        <span className="font-medium text-foreground">{set.weight}kg</span>
+                      <div
+                        key={i}
+                        className="grid grid-cols-3 text-sm py-1 border-t border-border/30"
+                      >
+                        <span className="text-muted-foreground">
+                          {set.setNumber}세트
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {set.weight}kg
+                        </span>
                         <span className="text-foreground">{set.reps}회</span>
                       </div>
                     ))}
@@ -174,7 +211,9 @@ export default function DashboardPage() {
             </div>
             <h1 className="text-2xl font-bold text-foreground">Helper</h1>
           </div>
-          <p className="text-sm text-muted-foreground">오늘도 화이팅하세요! 🔥</p>
+          <p className="text-sm text-muted-foreground">
+            오늘도 화이팅하세요! 🔥
+          </p>
         </div>
 
         {/* 통계 3개 */}
@@ -197,10 +236,14 @@ export default function DashboardPage() {
             {/* 볼륨 변화 */}
             <Card className="bg-card border-border">
               <CardContent className="p-3">
-                {isVolumeUp
-                  ? <TrendingUp className="h-4 w-4 text-primary mb-2" />
-                  : <TrendingDown className="h-4 w-4 text-destructive mb-2" />}
-                <p className={`text-lg font-bold ${isVolumeUp ? "text-primary" : "text-destructive"}`}>
+                {isVolumeUp ? (
+                  <TrendingUp className="h-4 w-4 text-primary mb-2" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-destructive mb-2" />
+                )}
+                <p
+                  className={`text-lg font-bold ${isVolumeUp ? "text-primary" : "text-destructive"}`}
+                >
                   {weekly?.lastWeekVolume === 0
                     ? "-"
                     : `${isVolumeUp ? "▲" : "▼"}${Math.abs(weekly?.volumeChangeRate ?? 0)}%`}
@@ -216,7 +259,9 @@ export default function DashboardPage() {
                 <p className="text-lg font-bold text-foreground">
                   {streak?.thisWeekWorkouts ?? weekly?.totalWorkouts ?? 0}회
                 </p>
-                <p className="text-[10px] text-muted-foreground">이번 주 운동</p>
+                <p className="text-[10px] text-muted-foreground">
+                  이번 주 운동
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -227,9 +272,15 @@ export default function DashboardPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">이번 달 운동</p>
-                <p className="text-3xl font-bold text-primary">{monthlyCount}회</p>
-                <p className={`text-xs font-medium mt-1 ${message.color}`}>{message.text}</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  이번 달 운동
+                </p>
+                <p className="text-3xl font-bold text-primary">
+                  {monthlyCount}회
+                </p>
+                <p className={`text-xs font-medium mt-1 ${message.color}`}>
+                  {message.text}
+                </p>
               </div>
               <div className="flex gap-1">
                 {[...Array(7)].map((_, i) => (
@@ -262,7 +313,9 @@ export default function DashboardPage() {
           {displayWorkouts.length === 0 ? (
             <Card className="bg-card border-border">
               <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground text-sm">아직 운동 기록이 없어요</p>
+                <p className="text-muted-foreground text-sm">
+                  아직 운동 기록이 없어요
+                </p>
                 <button
                   onClick={() => router.push("/workout")}
                   className="mt-3 text-xs text-primary hover:underline"
@@ -290,7 +343,9 @@ export default function DashboardPage() {
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 pl-6">
                           {workout.workoutDate ||
-                            new Date(workout.createdAt).toLocaleDateString("ko-KR")}
+                            new Date(workout.createdAt).toLocaleDateString(
+                              "ko-KR",
+                            )}
                         </p>
                       </div>
                       <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
