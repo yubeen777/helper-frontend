@@ -16,7 +16,14 @@ import {
   CartesianGrid,
 } from "recharts";
 import { statsApi, workoutApi } from "@/lib/api";
-import { Zap, TrendingUp, TrendingDown, Calendar } from "lucide-react";
+import {
+  Zap,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 const BODY_PART_KO: Record<string, string> = {
   CHEST: "가슴",
@@ -58,17 +65,36 @@ export default function AnalyticsPage() {
   );
   const [loading, setLoading] = useState(true);
 
+  const today = new Date();
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth());
+
+  const goToPrevMonth = () => {
+    if (calMonth === 0) {
+      setCalYear((y) => y - 1);
+      setCalMonth(11);
+    } else {
+      setCalMonth((m) => m - 1);
+    }
+  };
+  const goToNextMonth = () => {
+    if (calMonth === 11) {
+      setCalYear((y) => y + 1);
+      setCalMonth(0);
+    } else {
+      setCalMonth((m) => m + 1);
+    }
+  };
+
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [volume, weekly, consistency, workouts, streak] =
-          await Promise.all([
-            statsApi.volume(),
-            statsApi.weekly(),
-            statsApi.consistency(),
-            workoutApi.getAll(),
-            statsApi.streak(),
-          ]);
+        const [volume, weekly, workouts, streak] = await Promise.all([
+          statsApi.volume(),
+          statsApi.weekly(),
+          workoutApi.getAll(),
+          statsApi.streak(),
+        ]);
 
         setVolumeData(
           volume.map((v: { bodyPart: string; volume: number }) => ({
@@ -78,7 +104,6 @@ export default function AnalyticsPage() {
         );
         setWeeklyData(weekly);
         setStreakData(streak);
-        setWorkoutDates(consistency.workoutDates || []);
 
         const exerciseMap = new Map<number, string>();
         workouts.content?.forEach(
@@ -122,10 +147,21 @@ export default function AnalyticsPage() {
     fetchOneRM();
   }, [selectedExerciseId]);
 
-  // 달력 계산 (현재 월)
-  const today = new Date();
-  const calYear = today.getFullYear();
-  const calMonth = today.getMonth();
+  useEffect(() => {
+    const fetchConsistency = async () => {
+      try {
+        const lastDay = new Date(calYear, calMonth + 1, 0).getDate();
+        const dateParam = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+        const consistency = await statsApi.consistency(dateParam);
+        setWorkoutDates(consistency.workoutDates || []);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchConsistency();
+  }, [calYear, calMonth]);
+
+  // 달력 계산
   const monthLabel = `${calYear}년 ${calMonth + 1}월`;
   const firstDayOfMonth = new Date(calYear, calMonth, 1).getDay(); // 0=일
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
@@ -404,9 +440,29 @@ export default function AnalyticsPage() {
         {/* 운동 달력 */}
         <Card className="mb-6 bg-card border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">
-              운동 달력
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-foreground">
+                운동 달력
+              </CardTitle>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={goToPrevMonth}
+                  aria-label="이전 달"
+                  className="p-1 rounded hover:bg-muted/50 text-muted-foreground"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={goToNextMonth}
+                  aria-label="다음 달"
+                  className="p-1 rounded hover:bg-muted/50 text-muted-foreground"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">{monthLabel}</p>
           </CardHeader>
           <CardContent>
@@ -426,7 +482,10 @@ export default function AnalyticsPage() {
               {calendarCells.map((day, i) => {
                 if (!day) return <div key={i} />;
                 const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                const isToday = day === today.getDate();
+                const isToday =
+                  day === today.getDate() &&
+                  calMonth === today.getMonth() &&
+                  calYear === today.getFullYear();
                 const worked = workoutDateSet.has(dateStr);
                 return (
                   <div
